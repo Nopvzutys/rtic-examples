@@ -66,13 +66,14 @@ mod app {
     #[task(binds = EXTI15_10, local = [button])]
     fn button_click(ctx: button_click::Context) {
         ctx.local.button.clear_interrupt_pending_bit();
-        cortex_m_semihosting::hprintln!("button!");
+        rprintln!("button!");
+        //cortex_m_semihosting::hprintln!("button!");
     }
 
     #[task(local = [led, state])]
     fn blink(cx: blink::Context) {
         rprintln!("blink");
-        cortex_m_semihosting::hprintln!("blink!");
+        //cortex_m_semihosting::hprintln!("blink!");
         if *cx.local.state {
             cx.local.led.set_high();
             *cx.local.state = false;

@@ -401,19 +401,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
-name = "stm32f3-blinky"
-version = "0.1.0"
-dependencies = [
- "cortex-m-rtic",
- "cortex-m-semihosting",
- "embedded-hal 0.2.7",
- "panic-rtt-target",
- "rtt-target",
- "stm32f4xx-hal",
- "systick-monotonic",
-]
-
-[[package]]
 name = "stm32f4"
 version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -423,6 +410,19 @@ dependencies = [
  "cortex-m",
  "cortex-m-rt",
  "vcell",
+]
+
+[[package]]
+name = "stm32f4-blinky"
+version = "0.1.0"
+dependencies = [
+ "cortex-m-rtic",
+ "cortex-m-semihosting",
+ "embedded-hal 0.2.7",
+ "panic-rtt-target",
+ "rtt-target",
+ "stm32f4xx-hal",
+ "systick-monotonic",
 ]
 
 [[package]]
