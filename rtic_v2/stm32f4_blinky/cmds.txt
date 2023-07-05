@@ -1,6 +1,0 @@
-target remote :3333
-monitor arm semihosting enable
-monitor reset halt
-monitor flash erase_address 0x08000000 0x00080000
-file c:/git/rtic-examples/rtic_v1/stm32f3_blinky/target/thumbv7em-none-eabihf/debug/stm32f3-blinky
-load

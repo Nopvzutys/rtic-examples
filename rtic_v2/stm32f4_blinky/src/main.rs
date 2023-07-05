@@ -2,13 +2,14 @@
 #![deny(warnings)]
 #![no_main]
 #![no_std]
+#![feature(type_alias_impl_trait)]
 
 use panic_rtt_target as _;
 use rtic::app;
+use rtic_monotonics::systick::*;
 use rtt_target::{rprintln, rtt_init_print};
 use stm32f4xx_hal::gpio::*;
 use stm32f4xx_hal::prelude::*;
-use systick_monotonic::{fugit::Duration, Systick};
 
 #[app(device = stm32f4xx_hal::pac, peripherals = true, dispatchers = [EXTI1])]
 mod app {
@@ -24,12 +25,8 @@ mod app {
         button: PC13<Input>,
     }
 
-    #[monotonic(binds = SysTick, default = true)]
-    type MonoTimer = Systick<1000>;
-
     #[init]
-    fn init(mut cx: init::Context) -> (Shared, Local, init::Monotonics) {
-
+    fn init(mut cx: init::Context) -> (Shared, Local) {
         let gpioa = cx.device.GPIOA.split();
         let mut led = gpioa.pa5.into_push_pull_output();
 
@@ -37,7 +34,9 @@ mod app {
         let rcc = cx.device.RCC.constrain();
         let _clocks = rcc.cfgr.sysclk(48.MHz()).freeze();
 
-        let mono = Systick::new(cx.core.SYST, 48_000_000);
+        // Initialize the systick interrupt & obtain the token to prove that we did
+        let systick_mono_token = rtic_monotonics::create_systick_token!();
+        Systick::start(cx.core.SYST, 48_000_000, systick_mono_token); // default STM32F303 clock-rate is 36MHz
 
         let mut syscfg = cx.device.SYSCFG.constrain();
         let mut button = cx.device.GPIOC.split().pc13.into_pull_down_input();
@@ -52,12 +51,15 @@ mod app {
         led.set_high();
 
         // Schedule the blinking task
-        blink::spawn_after(Duration::<u64, 1, 1000>::from_ticks(1000)).unwrap();
+        blink::spawn().ok();
 
         (
             Shared {},
-            Local { led, state: false, button },
-            init::Monotonics(mono),
+            Local {
+                led,
+                state: false,
+                button,
+            },
         )
     }
 
@@ -71,16 +73,18 @@ mod app {
     }
 
     #[task(local = [led, state])]
-    fn blink(cx: blink::Context) {
-        rprintln!("blink");
-        //cortex_m_semihosting::hprintln!("blink!");
-        if *cx.local.state {
-            cx.local.led.set_high();
-            *cx.local.state = false;
-        } else {
-            cx.local.led.set_low();
-            *cx.local.state = true;
+    async fn blink(cx: blink::Context) {
+        loop {
+            rprintln!("blink");
+            //cortex_m_semihosting::hprintln!("blink!");
+            if *cx.local.state {
+                cx.local.led.set_high();
+                *cx.local.state = false;
+            } else {
+                cx.local.led.set_low();
+                *cx.local.state = true;
+            }
+            Systick::delay(1000.millis()).await;
         }
-        blink::spawn_after(Duration::<u64, 1, 1000>::from_ticks(1000)).unwrap();
     }
 }
