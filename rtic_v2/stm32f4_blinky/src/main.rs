@@ -14,6 +14,7 @@ use stm32f4xx_hal::prelude::*;
 #[app(device = stm32f4xx_hal::pac, peripherals = true, dispatchers = [EXTI1])]
 mod app {
     use super::*;
+    use rtic_sync::channel::*;
 
     #[shared]
     struct Shared {}
@@ -23,10 +24,12 @@ mod app {
         led: PA5<Output<PushPull>>,
         state: bool,
         button: PC13<Input>,
+        tx: Sender<'static,usize,32>,
+        rx: Receiver<'static,usize,32>,
     }
 
     #[init]
-    fn init(mut cx: init::Context) -> (Shared, Local) {
+    fn init(mut cx: init::Context<'a>) -> (Shared, Local) {
         let gpioa = cx.device.GPIOA.split();
         let mut led = gpioa.pa5.into_push_pull_output();
 
@@ -50,26 +53,33 @@ mod app {
         // Setup LED
         led.set_high();
 
+        let (tx, rx) = rtic_sync::make_channel!(usize,32);
+
         // Schedule the blinking task
+        receiver::spawn().ok();
         blink::spawn().ok();
 
         (
-            Shared {},
+            Shared {
+
+            },
             Local {
                 led,
                 state: false,
                 button,
+                tx,
+                rx,
             },
         )
     }
 
     /// React on the button click
     // see here for why this is EXTI15_10: https://github.com/stm32-rs/stm32f4xx-hal/blob/6d0c29233a4cd1f780b2fef3e47ef091ead6cf4a/src/gpio/exti.rs#L8-L23
-    #[task(binds = EXTI15_10, local = [button])]
-    fn button_click(ctx: button_click::Context) {
-        ctx.local.button.clear_interrupt_pending_bit();
+    #[task(binds = EXTI15_10, local = [button, tx])]
+    fn button_click(cx: button_click::Context) {
+        cx.local.button.clear_interrupt_pending_bit();
         rprintln!("button!");
-        //cortex_m_semihosting::hprintln!("button!");
+        cx.local.tx.try_send(9).unwrap();
     }
 
     #[task(local = [led, state])]
@@ -85,6 +95,18 @@ mod app {
                 *cx.local.state = true;
             }
             Systick::delay(1000.millis()).await;
+
+
         }
     }
+
+    #[task(local = [rx])]
+    async fn receiver(cx: receiver::Context) {
+        rprintln!("reciever");
+        loop {
+            let r = cx.local.rx.recv().await.unwrap();
+            rprintln!("Got: {}", r);
+        }
+    }
+
 }
