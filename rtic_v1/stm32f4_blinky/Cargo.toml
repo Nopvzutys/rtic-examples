@@ -2,7 +2,7 @@
 authors = ["Simsys <winfried.simon@gmail.com>"]
 edition = "2021"
 readme = "README.md"
-name = "stm32f3-blinky"
+name = "stm32f4-blinky"
 version = "0.1.0"
 
 [dependencies]
@@ -19,7 +19,7 @@ version = "0.16.*"
 
 # this lets you use `cargo fix`!
 [[bin]]
-name = "stm32f3-blinky"
+name = "stm32f4-blinky"
 test = false
 bench = false
 
